@@ -1,0 +1,14 @@
+APP_URL=<url_aplikasi>
+MAP_SERVICE_API_KEY=2<dq2jHxRc4D06OQ5XJaO>
+
+# Informasi Project
+Nama: StoryApp - Platform Berbagi Cerita
+Tema: Berbagi Cerita
+Deskripsi: StoryApp adalah aplikasi yang memudahkan pengguna untuk membagikan kisah hidup, pengalaman, dan inspirasi kepada banyak orang.
+
+# Fitur
+- Menampilkan daftar cerita dari API dengan tampilan seperti media sosial
+- Menambah cerita baru dengan foto dari kamera atau upload, serta lokasi dari peta interaktif
+- Peta interaktif untuk menampilkan lokasi setiap cerita
+- Mendukung aksesibilitas dan View Transition API untuk pengalaman pengguna yang lebih baik
+- Responsif dan nyaman digunakan di perangkat mobile
