@@ -1,5 +1,5 @@
 APP_URL=<url_aplikasi>
-MAP_SERVICE_API_KEY=2<dq2jHxRc4D06OQ5XJaO>
+MAP_SERVICE_API_KEY=<2dq2jHxRc4D06OQ5XJaO>
 
 # Informasi Project
 Nama: StoryApp - Platform Berbagi Cerita
