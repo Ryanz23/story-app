@@ -32,6 +32,7 @@ module.exports = merge(common, {
     new CopyWebpackPlugin({
       patterns: [
         { from: 'public', to: '.' },
+        { from: 'public/sw.js', to: 'sw.js' },
       ],
     }),
   ],

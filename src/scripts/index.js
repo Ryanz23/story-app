@@ -3,7 +3,6 @@ import '../styles/styles.css';
 import '../styles/header.css'; 
 import '../styles/footer.css'; 
 import 'leaflet/dist/leaflet.css';
-import AddView from './pages/view/add-view';
 import L from 'leaflet';
 
 import App from './pages/app';
@@ -16,6 +15,7 @@ import {
 import { isLoggedIn } from './data/api';
 import { getData } from './data/api';
 import CONFIG from './config';
+import { subscribeWebPush } from './data/api';
 
 // Initialize the header component
 const initHeader = () => {
@@ -141,13 +141,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('Service Worker registered with scope:', registration.scope);
+    .then((registration) => {
+      return Notification.requestPermission().then((permission) => {
+        if (permission !== 'granted') {
+          throw new Error('Permission not granted for Notification');
+        }
+        const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
+        // Unsubscribe jika sudah ada subscription lama
+        return registration.pushManager.getSubscription()
+          .then(sub => sub ? sub.unsubscribe() : null)
+          .then(() => registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          }));
+      });
+    })
+      .then((subscription) => {
+        console.log('Push subscription:', JSON.stringify(subscription));
+        // Kirim subscription ke server Anda untuk disimpan
+        subscribeWebPush(subscription.endpoint, subscription.keys)
+        .then(res => console.log('Subscription saved:', res))
+        .catch(err => console.error('Failed to save subscription:', err));
       })
       .catch((error) => {
-        console.error('Service Worker registration failed:', error);
+        console.error('Service Worker registration or push subscription failed:', error);
       });
-  } else {
-    console.warn('Push messaging is not supported in this browser.');
+  }
+  
+  // Helper untuk konversi VAPID key
+  function urlB64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
   }
 });
