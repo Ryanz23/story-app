@@ -1,10 +1,5 @@
 export default class HomeView {
   renderSection() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.hash = '#/login';
-      return '';
-    }
     return `
       <section class="container">
         <div class="welcome-header">
