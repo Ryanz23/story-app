@@ -53,11 +53,9 @@ async function attachSkipLinkListener() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Cek login sebelum render halaman utama
-  const token = localStorage.getItem('token');
-  if ((!token) && (window.location.hash === '#/' || window.location.hash === '#')) {
-    window.location.hash = '#/login';
-    return;
+  if (!window.location.hash || window.location.hash === '#') {
+    window.location.hash = '#/';
+    return; 
   }
 
   // Initialize the header component
@@ -106,12 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.addEventListener('hashchange', async () => {
-    const token = localStorage.getItem('token');
-    if ((!token) && (window.location.hash === '#/' || window.location.hash === '#')) {
-      window.location.hash = '#/login';
-      return;
-    }
-
     stopActiveCameraStream(); // Stop camera stream on hash change
     await app.renderPage();
     header.updateAuthState();
