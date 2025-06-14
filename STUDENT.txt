@@ -1,4 +1,4 @@
-APP_URL=<url_aplikasi>
+APP_URL=<https://story-web-app.netlify.app/#/login>
 MAP_SERVICE_API_KEY=<2dq2jHxRc4D06OQ5XJaO>
 
 # Informasi Project

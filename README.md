@@ -1,6 +1,6 @@
 # StoryApp - Platform Berbagi Cerita
 
-StoryApp adalah aplikasi web untuk berbagi kisah hidup, pengalaman, dan inspirasi. Proyek ini menggunakan Webpack untuk proses bundling, Babel untuk transpile JavaScript, serta mendukung proses build dan serving aplikasi secara modern dan modular.
+StoryApp adalah aplikasi web untuk berbagi kisah hidup, pengalaman, dan inspirasi. Proyek ini menggunakan Webpack untuk proses bundling, Babel untuk transpile JavaScript, serta menerapkan modularisasi kode modern. Aplikasi ini juga sudah mendukung autentikasi (login/register), proteksi halaman, dan routing berbasis hash.
 
 ## Table of Contents
 
@@ -8,6 +8,7 @@ StoryApp adalah aplikasi web untuk berbagi kisah hidup, pengalaman, dan inspiras
 - [Scripts](#scripts)
 - [Project Structure](#project-structure)
 - [Features](#features)
+- [Deployment](#deployment)
 - [Credits](#credits)
 
 ## Getting Started
@@ -20,36 +21,31 @@ StoryApp adalah aplikasi web untuk berbagi kisah hidup, pengalaman, dan inspiras
 ### Installation
 
 1. Clone repository ini:
-   ```shell
+   ```sh
    git clone https://github.com/Ryanz23/story-app.git
    cd story-app
    ```
-2. Ekstrak file jika perlu.
-3. Install dependencies:
-   ```shell
+2. Install dependencies:
+   ```sh
    npm install
    ```
 
 ## Scripts
 
 - **Build for Production:**
-
-  ```shell
+  ```sh
   npm run build
   ```
-
   Build aplikasi untuk produksi ke direktori `dist` menggunakan konfigurasi `webpack.prod.js`.
 
 - **Start Development Server:**
-
-  ```shell
+  ```sh
   npm run start-dev
   ```
-
   Menjalankan server pengembangan dengan live reload sesuai konfigurasi di `webpack.dev.js`.
 
-- **Serve:**
-  ```shell
+- **Serve Production Build:**
+  ```sh
   npm run serve
   ```
   Menyajikan konten dari direktori `dist` menggunakan [`http-server`](https://www.npmjs.com/package/http-server).
@@ -59,12 +55,14 @@ StoryApp adalah aplikasi web untuk berbagi kisah hidup, pengalaman, dan inspiras
 Struktur proyek ini dibuat agar kode tetap modular dan mudah dikembangkan.
 
 ```text
-starter-project/
+story-app/
+├── public/                 # File publik
 ├── dist/                   # File hasil build untuk produksi
 ├── src/                    # Source code utama proyek
-│   ├── public/             # File publik
 │   ├── scripts/            # File JavaScript aplikasi
-│   │   └── index.js        # Entry point utama JavaScript
+│   │   ├── index.js        # Entry point utama JavaScript
+│   │   ├── routes/         # Routing dan mapping halaman
+│   │   └── pages/          # Halaman-halaman aplikasi (home, login, register, dll)
 │   ├── styles/             # File CSS aplikasi
 │   │   └── styles.css      # File CSS utama
 │   └── index.html          # File HTML utama aplikasi
@@ -79,11 +77,24 @@ starter-project/
 
 ## Features
 
-- Menampilkan daftar cerita dari API dengan tampilan seperti media sosial
-- Menambah cerita baru dengan foto dari kamera atau upload, serta lokasi dari peta interaktif
-- Peta interaktif untuk menampilkan lokasi setiap cerita
-- Mendukung aksesibilitas dan View Transition API untuk pengalaman pengguna yang lebih baik
-- Responsif dan nyaman digunakan di perangkat mobile
+- **Autentikasi:** Login dan register, token disimpan di localStorage.
+- **Proteksi Halaman:** Halaman utama (`/`) otomatis redirect ke login jika belum login.
+- **Routing Hash:** Navigasi antar halaman menggunakan hash (`#/route`).
+- **Daftar Cerita:** Menampilkan daftar cerita dari API dengan tampilan seperti media sosial.
+- **Tambah Cerita:** Menambah cerita baru dengan foto dari kamera/upload dan lokasi dari peta interaktif.
+- **Peta Interaktif:** Menampilkan lokasi setiap cerita.
+- **Aksesibilitas:** Mendukung skip link dan View Transition API.
+- **Responsif:** Nyaman digunakan di perangkat mobile.
+
+## Deployment
+
+Aplikasi dideploy ke layanan static hosting Netlify.
+
+**URL Netlify:**  
+[https://story-web-app.netlify.app/#/](https://story-web-app.netlify.app/#/)
+
+- Jika user belum login dan mengakses root (`/#/`), otomatis akan diarahkan ke halaman login.
+- Jika tidak mengarah pada halaman login silakan refresh halaman
 
 ## Credits
 
