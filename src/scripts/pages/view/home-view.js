@@ -4,7 +4,11 @@ export default class HomeView {
       <section class="container">
         <div class="welcome-header">
           <h1>Berbagi Cerita</h1>
-          <a href="#stories-list" class="skip-link">Langsung ke konten</a>
+        </div>
+          <div class="offline-actions">
+          <button id="save-offline-btn">Simpan Cerita Pertama ke Offline</button>
+          <button id="show-offline-btn">Tampilkan Cerita Offline</button>
+          <button id="clear-offline-btn">Hapus Cerita Offline</button>
         </div>
         <div id="stories-list" aria-live="polite" class="story-grid" tabindex="0"></div>
       </section>

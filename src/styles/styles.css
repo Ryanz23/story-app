@@ -5,6 +5,12 @@
     #16213e 50%,
     #0f3460 100%
   );
+  --gradient-secondary: linear-gradient(
+    135deg,
+    #414177 0%,
+    #2c4077 50%,
+    #134481 100%
+  );
   --color-secondary: #42b72a;
   --color-accent: #4267b2;
   --color-surface: #ffffff;
@@ -265,27 +271,36 @@ body {
 
 /* Skip Link */
 .skip-link {
-  display: inline-block;
-  margin-left: 24px;
+  position: absolute;
+  right: 16px;
+  top: -60px; /* Sembunyikan di atas navbar */
+  width: auto;
+  height: auto;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 99;
   background: var(--color-primary);
   color: #fff;
-  padding: 8px 18px;
-  border: 2px solid #fff;
-  border-radius: 6px;
-  font-weight: bold;
+  padding: 12px 24px;
+  border: 2px solid #ffd600;
+  border-radius: 8px;
+  font-weight: 700;
   font-size: 1rem;
   text-decoration: none;
-  transition:
-    box-shadow 0.3s,
-    outline 0.3s;
   box-shadow: none;
   outline: none;
-  opacity: 1;
-  pointer-events: auto;
+  transition:
+    opacity 0.3s,
+    top 0.3s,
+    box-shadow 0.3s,
+    outline 0.3s;
 }
 
 .skip-link:focus {
-  box-shadow: 0 2px 8px #ffd600;
+  top: 205px;
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 5px #ffd600;
   outline: 2px solid #ffd600;
 }
 
@@ -929,6 +944,59 @@ body {
   color: var(--color-light-text);
 }
 
+/* Offline actions button group */
+.offline-actions {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0 1rem 0;
+  justify-content: center;
+}
+
+#save-offline-btn {
+  background: #42b72a;      /* Hijau terang */
+  color: #fff;
+}
+
+#save-offline-btn:hover,
+#save-offline-btn:focus {
+  background: #36981f;
+  color: #fff;
+}
+
+#show-offline-btn {
+  background: var(--color-primary); 
+  color: #fff;
+}
+
+#show-offline-btn:hover,
+#show-offline-btn:focus {
+  background: var(--gradient-secondary);
+  color: #fff;
+}
+
+#clear-offline-btn {
+  background: #ff5252;      /* Merah terang */
+  color: #fff;
+}
+
+#clear-offline-btn:hover,
+#clear-offline-btn:focus {
+  background: #c62828;
+  color: #fff;
+}
+
+/* Tetap gunakan style dasar untuk tombol offline */
+.offline-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
 .view-story-btn {
   display: inline-block;
   padding: 6px 12px;
@@ -1233,6 +1301,16 @@ body {
 @media screen and (max-width: 600px) {
   .container {
     padding-inline: 8px;
+  }
+
+  .skip-link {
+    right: 8px;
+  }
+
+  .skip-link:focus {
+    top: 56px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
   }
 
   /* Enhanced fixes for login page on small screens */

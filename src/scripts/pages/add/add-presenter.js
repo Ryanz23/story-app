@@ -39,27 +39,20 @@ export default class AddPresenter {
     this._map = null;
 
     this.view.setupCameraAndMap({
-      onCapture: (blob, img, video, captureBtn, recaptureBtn) => {
+      onCapture: (blob) => {
         this._photoBlob = blob;
         this._photoUrl = URL.createObjectURL(blob);
-        img.src = this._photoUrl;
-        img.style.display = 'block';
-        video.style.display = 'none';
-        captureBtn.style.display = 'none';
-        recaptureBtn.style.display = 'inline-block';
+        this.view.showCapturedImage(this._photoUrl); // manipulasi DOM di View
         if (this._marker) {
-          this._marker.setIcon(this._createImageIcon(this._photoUrl));
+          this.view.setMarkerIcon(this._marker, this._photoUrl); // manipulasi marker di View
         }
       },
-      onRecapture: (img, video, captureBtn, recaptureBtn) => {
-        img.style.display = 'none';
-        video.style.display = 'block';
-        captureBtn.style.display = 'inline-block';
-        recaptureBtn.style.display = 'none';
+      onRecapture: () => {
         this._photoBlob = null;
         this._photoUrl = null;
+        this.view.resetCapturedImage();
         if (this._marker) {
-          this._marker.setIcon(L.Icon.Default.prototype);
+          this.view.resetMarkerIcon(this._marker);
         }
       },
       onMapClick: (e, map, marker, setMarker) => {

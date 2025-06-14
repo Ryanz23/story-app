@@ -3,7 +3,8 @@
 const headerLoggedInTemplate = `
 <header>
   <div class="main-header container">
-    <a class="brand-name" href="#/"><img src="images/icon.svg" alt="StoryApp Logo"> StoryApp</a>
+    <a href="#stories-list" class="skip-link">Langsung ke konten</a>
+    <a class="brand-name" href="#/"><img src="images/icon.png" alt="StoryApp Logo"> StoryApp</a>
 
     <nav id="navigation-drawer" class="navigation-drawer" aria-label="Main navigation">
       <ul id="nav-list" class="nav-list">

@@ -1,7 +1,7 @@
 // CSS imports
 import '../styles/styles.css';
-import '../styles/header.css'; // Import header-specific styles
-import '../styles/footer.css'; // Import footer-specific styles
+import '../styles/header.css'; 
+import '../styles/footer.css'; 
 import 'leaflet/dist/leaflet.css';
 import AddView from './pages/view/add-view';
 import L from 'leaflet';
@@ -39,9 +39,52 @@ const initFooter = () => {
   return new Footer();
 };
 
+async function attachSkipLinkListener() {
+  const skipLink = document.querySelector('.skip-link');
+  const mainContent = document.getElementById('stories-list');
+  if (skipLink && mainContent) {
+    skipLink.onclick = function(e) {
+      e.preventDefault();
+      mainContent.setAttribute('tabindex', '-1');
+      mainContent.focus();
+      mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.location.hash || window.location.hash === '#') {
+    window.location.hash = '#/';
+    return; 
+  }
+
   // Initialize the header component
   const header = initHeader();
+
+  const skipLink = document.querySelector('.skip-link');
+  window.addEventListener('hashchange', () => {
+    // Re-attach skip link event listener jika header di-render ulang
+    const newSkipLink = document.querySelector('.skip-link');
+    const mainContent = document.getElementById('stories-list');
+    if (newSkipLink && mainContent) {
+      newSkipLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        mainContent.setAttribute('tabindex', '-1');
+        mainContent.focus();
+        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  });
+
+  const mainContent = document.getElementById('stories-list');
+  if (skipLink && mainContent) {
+    skipLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      mainContent.setAttribute('tabindex', '-1');
+      mainContent.focus();
+      mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 
   // Initialize the footer component
   const footer = initFooter();
@@ -51,12 +94,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     content: document.querySelector('#main-content'),
   });
   await app.renderPage();
+  attachSkipLinkListener();
 
-  // Handle page navigation
+  function stopActiveCameraStream() {
+    if (window.activeCameraStream) {
+      window.activeCameraStream.getTracks().forEach(track => track.stop());
+      window.activeCameraStream = null;
+    }
+  }
+
   window.addEventListener('hashchange', async () => {
+    stopActiveCameraStream(); // Stop camera stream on hash change
     await app.renderPage();
-    // Update auth UI on each navigation
     header.updateAuthState();
+    attachSkipLinkListener();
   });
 
   // Handle view transitions for links
@@ -69,52 +120,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     }
-  });
-
-  const addView = new AddView();
-  document.querySelector('#main-content').innerHTML = addView.renderSection();
-
-  // Jalankan setup kamera dan peta
-  addView.setupCameraAndMap({
-    onCapture: (blob, img, video, captureBtn, recaptureBtn) => {
-      const imageUrl = URL.createObjectURL(blob);
-      img.src = imageUrl;
-      img.style.display = 'block';
-      video.style.display = 'none';
-      captureBtn.style.display = 'none';
-      recaptureBtn.style.display = 'inline-block';
-      img._blob = blob;
-    },
-
-    onRecapture: (img, video, captureBtn, recaptureBtn) => {
-      img.style.display = 'none';
-      video.style.display = 'block';
-      captureBtn.style.display = 'inline-block';
-      recaptureBtn.style.display = 'none';
-      delete img._blob;
-    },
-    onMapClick: (e, map, marker, setMarker) => {
-      const { lat, lng } = e.latlng;
-      if (marker) {
-        marker.setLatLng([lat, lng]);
-      } else {
-        setMarker(L.marker([lat, lng]).addTo(map));
-      }
-      addView.setLatLngInputs(lat, lng);
-    },
-    onGeoSuccess: (position, map, marker, setMarker) => {
-      const { latitude, longitude } = position.coords;
-      map.setView([latitude, longitude], 13);
-      if (marker) {
-        marker.setLatLng([latitude, longitude]);
-      } else {
-        setMarker(L.marker([latitude, longitude]).addTo(map));
-      }
-      addView.setLatLngInputs(latitude, longitude);
-    },
-    onGeoError: (err) => {
-      console.warn('Geolocation error:', err);
-    },
   });
 
   const fileInput = document.getElementById('image-upload');
@@ -134,39 +139,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Handle submit
-  addView.onFormSubmit(async (e) => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      addView.showMessage('error', 'Anda belum login.');
-      addView.setSubmitButtonState(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${CONFIG.BASE_URL}/stories`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        addView.showMessage('success', 'Cerita berhasil dikirim!');
-        addView.resetFormUI();
-        form.reset();
-      } else {
-        addView.showMessage(
-          'error',
-          result.message || 'Gagal mengirim cerita.'
-        );
-      }
-    } catch (err) {
-      addView.showMessage('error', 'Terjadi kesalahan jaringan.');
-    }
-  });
+  } else {
+    console.warn('Push messaging is not supported in this browser.');
+  }
 });
