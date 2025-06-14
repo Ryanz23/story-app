@@ -33,6 +33,108 @@ const initHeader = () => {
   return new Header();
 };
 
+// Improved Service Worker Registration
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('ServiceWorker registration successful:', registration);
+        
+        // Request notification permission
+        return Notification.requestPermission();
+      })
+      .then((permission) => {
+        console.log('Notification permission:', permission);
+        
+        if (permission !== 'granted') {
+          console.warn('Notification permission not granted');
+          return null; // Don't throw error, just skip push subscription
+        }
+        
+        // Get service worker registration
+        return navigator.serviceWorker.ready;
+      })
+      .then((registration) => {
+        if (!registration) return null;
+        
+        // Check if VAPID key exists
+        if (!CONFIG.VAPID_PUBLIC_KEY) {
+          console.warn('VAPID_PUBLIC_KEY not found in config');
+          return null;
+        }
+        
+        const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
+        
+        // Get existing subscription
+        return registration.pushManager.getSubscription()
+          .then((existingSubscription) => {
+            if (existingSubscription) {
+              console.log('Existing subscription found');
+              return existingSubscription;
+            }
+            
+            // Subscribe to push notifications
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey,
+            });
+          });
+      })
+      .then((subscription) => {
+        if (!subscription) {
+          console.log('No push subscription created');
+          return;
+        }
+        
+        console.log('Push subscription:', JSON.stringify(subscription));
+        
+        // Send subscription to server
+        return subscribeWebPush(subscription.endpoint, subscription.keys);
+      })
+      .then((result) => {
+        if (result) {
+          console.log('Subscription saved to server:', result);
+        }
+      })
+      .catch((error) => {
+        console.error('Service Worker registration or push subscription failed:', error);
+        
+        // Don't let SW registration failure break the app
+        if (error.name === 'AbortError') {
+          console.log('Registration was aborted - this is usually fine');
+        }
+      });
+  });
+} else {
+  console.log('Service Worker or Push Manager not supported');
+}
+
+// Helper function for VAPID key conversion
+function urlB64ToUint8Array(base64String) {
+  if (!base64String) {
+    throw new Error('Base64 string is required');
+  }
+  
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+    
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    
+    return outputArray;
+  } catch (error) {
+    console.error('Failed to decode VAPID key:', error);
+    throw new Error('Invalid VAPID key format');
+  }
+}
+
 // Initialize the footer component
 const initFooter = () => {
   // Footer is initialized directly by the class
@@ -137,48 +239,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsDataURL(file);
       }
     });
-  }
-
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register('/sw.js')
-    .then((registration) => {
-      return Notification.requestPermission().then((permission) => {
-        if (permission !== 'granted') {
-          throw new Error('Permission not granted for Notification');
-        }
-        const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
-        // Unsubscribe jika sudah ada subscription lama
-        return registration.pushManager.getSubscription()
-          .then(sub => sub ? sub.unsubscribe() : null)
-          .then(() => registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey,
-          }));
-      });
-    })
-      .then((subscription) => {
-        console.log('Push subscription:', JSON.stringify(subscription));
-        // Kirim subscription ke server Anda untuk disimpan
-        subscribeWebPush(subscription.endpoint, subscription.keys)
-        .then(res => console.log('Subscription saved:', res))
-        .catch(err => console.error('Failed to save subscription:', err));
-      })
-      .catch((error) => {
-        console.error('Service Worker registration or push subscription failed:', error);
-      });
-  }
-  
-  // Helper untuk konversi VAPID key
-  function urlB64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
   }
 });
