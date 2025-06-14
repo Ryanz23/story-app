@@ -5,6 +5,7 @@ import '../styles/footer.css';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+// Component imports
 import App from './pages/app';
 import Header from './components/header';
 import Footer from './components/footer';
@@ -12,14 +13,18 @@ import {
   headerLoggedInTemplate,
   headerLoggedOutTemplate,
 } from './components/header-template';
-import { isLoggedIn } from './data/api';
-import { getData } from './data/api';
+
+// API and config imports
+import { isLoggedIn, getData, subscribeWebPush } from './data/api';
 import CONFIG from './config';
-import { subscribeWebPush } from './data/api';
+
+// Global state
+let appInstance = null;
+let headerInstance = null;
+let footerInstance = null;
 
 // Initialize the header component
 const initHeader = () => {
-  // Insert header HTML into the page based on login state
   const headerContainer = document.getElementById('header-container');
   if (headerContainer) {
     if (isLoggedIn()) {
@@ -28,86 +33,13 @@ const initHeader = () => {
       headerContainer.innerHTML = headerLoggedOutTemplate(window.location.hash);
     }
   }
-
-  // Initialize header functionality
   return new Header();
 };
 
-// Improved Service Worker Registration
-if ('serviceWorker' in navigator && 'PushManager' in window) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('ServiceWorker registration successful:', registration);
-        
-        // Request notification permission
-        return Notification.requestPermission();
-      })
-      .then((permission) => {
-        console.log('Notification permission:', permission);
-        
-        if (permission !== 'granted') {
-          console.warn('Notification permission not granted');
-          return null; // Don't throw error, just skip push subscription
-        }
-        
-        // Get service worker registration
-        return navigator.serviceWorker.ready;
-      })
-      .then((registration) => {
-        if (!registration) return null;
-        
-        // Check if VAPID key exists
-        if (!CONFIG.VAPID_PUBLIC_KEY) {
-          console.warn('VAPID_PUBLIC_KEY not found in config');
-          return null;
-        }
-        
-        const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
-        
-        // Get existing subscription
-        return registration.pushManager.getSubscription()
-          .then((existingSubscription) => {
-            if (existingSubscription) {
-              console.log('Existing subscription found');
-              return existingSubscription;
-            }
-            
-            // Subscribe to push notifications
-            return registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey,
-            });
-          });
-      })
-      .then((subscription) => {
-        if (!subscription) {
-          console.log('No push subscription created');
-          return;
-        }
-        
-        console.log('Push subscription:', JSON.stringify(subscription));
-        
-        // Send subscription to server
-        return subscribeWebPush(subscription.endpoint, subscription.keys);
-      })
-      .then((result) => {
-        if (result) {
-          console.log('Subscription saved to server:', result);
-        }
-      })
-      .catch((error) => {
-        console.error('Service Worker registration or push subscription failed:', error);
-        
-        // Don't let SW registration failure break the app
-        if (error.name === 'AbortError') {
-          console.log('Registration was aborted - this is usually fine');
-        }
-      });
-  });
-} else {
-  console.log('Service Worker or Push Manager not supported');
-}
+// Initialize the footer component
+const initFooter = () => {
+  return new Footer();
+};
 
 // Helper function for VAPID key conversion
 function urlB64ToUint8Array(base64String) {
@@ -135,84 +67,121 @@ function urlB64ToUint8Array(base64String) {
   }
 }
 
-// Initialize the footer component
-const initFooter = () => {
-  // Footer is initialized directly by the class
-  return new Footer();
-};
+// Service Worker and Push Notification Setup
+async function initServiceWorker() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('Service Worker or Push Manager not supported');
+    return;
+  }
 
-async function attachSkipLinkListener() {
-  const skipLink = document.querySelector('.skip-link');
-  const mainContent = document.getElementById('stories-list');
-  if (skipLink && mainContent) {
-    skipLink.onclick = function(e) {
-      e.preventDefault();
-      mainContent.setAttribute('tabindex', '-1');
-      mainContent.focus();
-      mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('Service Worker registered successfully');
+    
+    // Wait for service worker to be ready
+    await navigator.serviceWorker.ready;
+    
+    // Request notification permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Notification permission not granted');
+      return;
+    }
+
+    // Subscribe to push notifications
+    const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
+    
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    }
+
+    // Send subscription to server
+    const response = await subscribeWebPush(subscription.endpoint, subscription.keys);
+    console.log('Push subscription successful:', response);
+    
+  } catch (error) {
+    console.error('Service Worker setup failed:', error);
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!window.location.hash || window.location.hash === '#') {
-    window.location.hash = '#/';
-    return; 
-  }
-
-  // Initialize the header component
-  const header = initHeader();
-
+// Skip link functionality
+function initSkipLink() {
   const skipLink = document.querySelector('.skip-link');
-  window.addEventListener('hashchange', () => {
-    // Re-attach skip link event listener jika header di-render ulang
-    const newSkipLink = document.querySelector('.skip-link');
-    const mainContent = document.getElementById('stories-list');
-    if (newSkipLink && mainContent) {
-      newSkipLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        mainContent.setAttribute('tabindex', '-1');
-        mainContent.focus();
-        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+  const mainContent = document.getElementById('stories-list') || document.getElementById('main-content');
+  
+  if (!skipLink || !mainContent) return;
+  
+  const handleSkipLinkClick = (e) => {
+    e.preventDefault();
+    const originalTabIndex = mainContent.getAttribute('tabindex');
+    mainContent.setAttribute('tabindex', '-1');
+    mainContent.focus();
+    mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    setTimeout(() => {
+      if (originalTabIndex !== null) {
+        mainContent.setAttribute('tabindex', originalTabIndex);
+      } else {
+        mainContent.removeAttribute('tabindex');
+      }
+    }, 100);
+  };
+  
+  skipLink.removeEventListener('click', handleSkipLinkClick);
+  skipLink.addEventListener('click', handleSkipLinkClick);
+}
+
+// Camera stream management
+function stopActiveCameraStream() {
+  if (window.activeCameraStream) {
+    window.activeCameraStream.getTracks().forEach(track => track.stop());
+    window.activeCameraStream = null;
+  }
+}
+
+// File input handler
+function initFileInput() {
+  const fileInput = document.getElementById('image-upload');
+  const img = document.getElementById('captured-image');
+  
+  if (!fileInput || !img) return;
+  
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        img.src = ev.target.result;
+        img.style.display = 'block';
+        delete img._blob; // Remove camera data if exists
+      };
+      reader.readAsDataURL(file);
     }
   });
+}
 
-  const mainContent = document.getElementById('stories-list');
-  if (skipLink && mainContent) {
-    skipLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      mainContent.setAttribute('tabindex', '-1');
-      mainContent.focus();
-      mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+// Hash change handler
+async function handleHashChange() {
+  stopActiveCameraStream();
+  
+  if (appInstance) {
+    await appInstance.renderPage();
   }
-
-  // Initialize the footer component
-  const footer = initFooter();
-
-  // Initialize the app
-  const app = new App({
-    content: document.querySelector('#main-content'),
-  });
-  await app.renderPage();
-  attachSkipLinkListener();
-
-  function stopActiveCameraStream() {
-    if (window.activeCameraStream) {
-      window.activeCameraStream.getTracks().forEach(track => track.stop());
-      window.activeCameraStream = null;
-    }
+  
+  if (headerInstance) {
+    headerInstance.updateAuthState();
   }
+  
+  initSkipLink();
+}
 
-  window.addEventListener('hashchange', async () => {
-    stopActiveCameraStream(); // Stop camera stream on hash change
-    await app.renderPage();
-    header.updateAuthState();
-    attachSkipLinkListener();
-  });
-
-  // Handle view transitions for links
+// View transition handler
+function initViewTransitions() {
   document.addEventListener('click', (e) => {
     if (e.target.tagName === 'A' && e.target.href.includes('#/')) {
       if (document.startViewTransition) {
@@ -223,21 +192,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
+}
 
-  const fileInput = document.getElementById('image-upload');
-  const img = document.getElementById('captured-image');
-  if (fileInput && img) {
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (ev) {
-          img.src = ev.target.result;
-          img.style.display = 'block';
-          delete img._blob; // Hapus data kamera jika ada
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+// Main initialization
+document.addEventListener('DOMContentLoaded', async () => {
+  // Handle default route
+  if (!window.location.hash || window.location.hash === '#') {
+    window.location.hash = '#/';
+    return;
+  }
+
+  try {
+    // Initialize service worker
+    await initServiceWorker();
+    
+    // Initialize components
+    headerInstance = initHeader();
+    footerInstance = initFooter();
+    
+    // Initialize main app
+    const mainContentElement = document.querySelector('#main-content');
+    if (mainContentElement) {
+      appInstance = new App({ content: mainContentElement });
+      await appInstance.renderPage();
+    }
+    
+    // Initialize other features
+    initSkipLink();
+    initFileInput();
+    initViewTransitions();
+    
+    // Set up hash change listener
+    window.addEventListener('hashchange', handleHashChange);
+    
+    console.log('Application initialized successfully');
+    
+  } catch (error) {
+    console.error('Application initialization failed:', error);
   }
 });
