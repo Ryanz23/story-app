@@ -41,6 +41,7 @@ const initFooter = () => {
   return new Footer();
 };
 
+
 // Helper function for VAPID key conversion
 function urlB64ToUint8Array(base64String) {
   if (!base64String) {
@@ -78,6 +79,18 @@ async function initServiceWorker() {
     const registration = await navigator.serviceWorker.register('/sw.js');
     console.log('Service Worker registered successfully');
 
+    if (registration.installing) {
+      await new Promise(resolve => {
+        registration.installing.addEventListener('statechange', () => {
+          if (registration.installing.state === 'installed') {
+            resolve();
+          }
+        });
+      });
+    }
+
+    await subscribeToPushNotifications(registration);
+    
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
 
@@ -88,15 +101,65 @@ async function initServiceWorker() {
       return;
     }
 
+    // Cek VAPID key ada atau tidak
+    if (!CONFIG.VAPID_PUBLIC_KEY) {
+      console.warn('VAPID public key not configured');
+      return;
+    }
+
     // Subscribe to push notifications
     const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
 
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+      } catch (subscribeError) {
+        console.error('Failed to subscribe to push notifications:', subscribeError);
+        return; // Exit gracefully
+      }
+    }
+    
+    console.log('Push subscription:', subscription);
+
+    // Send subscription to server
+    try {
+      const response = await subscribeWebPush(subscription.endpoint, subscription.keys);
+      console.log('Push subscription successful:', response);
+    } catch (apiError) {
+      console.error('Failed to send subscription to server:', apiError);
+    }
+    
+  } catch (error) {
+    console.error('Service Worker setup failed:', error);
+  }
+}
+
+async function subscribeToPushNotifications(registration) {
+  try {
+    // Check if push notifications are supported
+    if (!('PushManager' in window)) {
+      throw new Error('Push notifications not supported');
+    }
+
+    // Request permission first
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      throw new Error('Notification permission denied');
+    }
+
+    // Check if already subscribed
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      // Subscribe to push notifications
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey,
+        applicationServerKey: CONFIG.VAPID_PUBLIC_KEY
       });
     }
 
@@ -106,8 +169,41 @@ async function initServiceWorker() {
     const response = await subscribeWebPush({endpoint, keys});
     console.log('Push subscription successful:', response);
 
+    console.log('Push subscription:', subscription);
+    
+    // Send subscription to your server
+    // await sendSubscriptionToServer(subscription);
+    
+    return subscription;
   } catch (error) {
-    console.error('Service Worker setup failed:', error);
+    console.error('Failed to subscribe to push notifications:', error);
+    throw error;
+  }
+}
+
+// Helper function for VAPID key conversion
+function urlB64ToUint8Array(base64String) {
+  if (!base64String) {
+    throw new Error('Base64 string is required');
+  }
+  
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+    
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    
+    return outputArray;
+  } catch (error) {
+    console.error('Failed to decode VAPID key:', error);
+    throw new Error('Invalid VAPID key format');
   }
 }
 
@@ -205,7 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    // Initialize service worker
+    // Initialize service worker and push notifications
     await initServiceWorker();
 
     // Initialize components
