@@ -127,27 +127,46 @@ self.addEventListener('push', (event) => {
   
   if (event.data) {
     try {
-      const data = event.data.json();
-      notificationData = {
-        title: data.title || notificationData.title,
-        body: data.body || notificationData.body,
-        icon: data.icon || notificationData.icon,
-        badge: data.badge || notificationData.badge,
-        tag: data.tag || 'story-app-notification',
-        data: data.url ? { url: data.url } : {},
-        actions: data.actions || [
-          {
-            action: 'view',
-            title: 'View',
-          },
-          {
-            action: 'dismiss',
-            title: 'Dismiss'
-          }
-        ]
-      };
+      // First, try to get the data as text
+      const rawData = event.data.text();
+      console.log('Raw push data:', rawData);
+      
+      // Check if it's JSON by trying to parse it
+      let parsedData;
+      try {
+        parsedData = JSON.parse(rawData);
+        console.log('Parsed JSON data:', parsedData);
+      } catch (jsonError) {
+        // If it's not JSON, treat it as plain text for the body
+        console.log('Data is not JSON, using as plain text body');
+        notificationData.body = rawData;
+        parsedData = null;
+      }
+      
+      // If we successfully parsed JSON, use it
+      if (parsedData) {
+        notificationData = {
+          title: parsedData.title || notificationData.title,
+          body: parsedData.body || notificationData.body,
+          icon: parsedData.icon || notificationData.icon,
+          badge: parsedData.badge || notificationData.badge,
+          tag: parsedData.tag || 'story-app-notification',
+          data: parsedData.url ? { url: parsedData.url } : {},
+          actions: parsedData.actions || [
+            {
+              action: 'view',
+              title: 'View',
+            },
+            {
+              action: 'dismiss',
+              title: 'Dismiss'
+            }
+          ]
+        };
+      }
     } catch (error) {
-      console.error('Error parsing push data:', error);
+      console.error('Error processing push data:', error);
+      // Use default notification data if there's any error
     }
   }
 

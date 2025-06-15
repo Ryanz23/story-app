@@ -21,6 +21,8 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
+        { from: 'public/manifest.json', to: 'manifest.json' },
+        { from: 'public/images', to: 'images' },
         { from: 'public/sw.js', to: 'sw.js' },
       ],
     }),
