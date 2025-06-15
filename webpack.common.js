@@ -24,6 +24,8 @@ module.exports = {
         { from: 'public/manifest.json', to: 'manifest.json' },
         { from: 'public/images', to: 'images' },
         { from: 'public/sw.js', to: 'sw.js' },
+        { from: 'public/manifest.json', to: 'manifest.json' },
+        { from: 'public/images', to: 'images' },
       ],
     }),
     new HtmlWebpackPlugin({

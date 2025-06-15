@@ -1,7 +1,7 @@
 // CSS imports
 import '../styles/styles.css';
-import '../styles/header.css'; 
-import '../styles/footer.css'; 
+import '../styles/header.css';
+import '../styles/footer.css';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -41,6 +41,33 @@ const initFooter = () => {
   return new Footer();
 };
 
+
+// Helper function for VAPID key conversion
+function urlB64ToUint8Array(base64String) {
+  if (!base64String) {
+    throw new Error('Base64 string is required');
+  }
+
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+
+    return outputArray;
+  } catch (error) {
+    console.error('Failed to decode VAPID key:', error);
+    throw new Error('Invalid VAPID key format');
+  }
+}
+
 // Service Worker and Push Notification Setup
 async function initServiceWorker() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -66,7 +93,7 @@ async function initServiceWorker() {
     
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
-    
+
     // Request notification permission
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
@@ -82,9 +109,9 @@ async function initServiceWorker() {
 
     // Subscribe to push notifications
     const applicationServerKey = urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
-    
+
     let subscription = await registration.pushManager.getSubscription();
-    
+
     if (!subscription) {
       try {
         subscription = await registration.pushManager.subscribe({
@@ -136,6 +163,12 @@ async function subscribeToPushNotifications(registration) {
       });
     }
 
+    const { endpoint, keys } = subscription.toJSON();
+
+    // Send subscription to server
+    const response = await subscribeWebPush({endpoint, keys});
+    console.log('Push subscription successful:', response);
+
     console.log('Push subscription:', subscription);
     
     // Send subscription to your server
@@ -178,16 +211,16 @@ function urlB64ToUint8Array(base64String) {
 function initSkipLink() {
   const skipLink = document.querySelector('.skip-link');
   const mainContent = document.getElementById('stories-list') || document.getElementById('main-content');
-  
+
   if (!skipLink || !mainContent) return;
-  
+
   const handleSkipLinkClick = (e) => {
     e.preventDefault();
     const originalTabIndex = mainContent.getAttribute('tabindex');
     mainContent.setAttribute('tabindex', '-1');
     mainContent.focus();
     mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
+
     setTimeout(() => {
       if (originalTabIndex !== null) {
         mainContent.setAttribute('tabindex', originalTabIndex);
@@ -196,7 +229,7 @@ function initSkipLink() {
       }
     }, 100);
   };
-  
+
   skipLink.removeEventListener('click', handleSkipLinkClick);
   skipLink.addEventListener('click', handleSkipLinkClick);
 }
@@ -213,14 +246,14 @@ function stopActiveCameraStream() {
 function initFileInput() {
   const fileInput = document.getElementById('image-upload');
   const img = document.getElementById('captured-image');
-  
+
   if (!fileInput || !img) return;
-  
+
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = function(ev) {
+      reader.onload = function (ev) {
         img.src = ev.target.result;
         img.style.display = 'block';
         delete img._blob; // Remove camera data if exists
@@ -233,15 +266,15 @@ function initFileInput() {
 // Hash change handler
 async function handleHashChange() {
   stopActiveCameraStream();
-  
+
   if (appInstance) {
     await appInstance.renderPage();
   }
-  
+
   if (headerInstance) {
     headerInstance.updateAuthState();
   }
-  
+
   initSkipLink();
 }
 
@@ -270,28 +303,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Initialize service worker and push notifications
     await initServiceWorker();
-    
+
     // Initialize components
     headerInstance = initHeader();
     footerInstance = initFooter();
-    
+
     // Initialize main app
     const mainContentElement = document.querySelector('#main-content');
     if (mainContentElement) {
       appInstance = new App({ content: mainContentElement });
       await appInstance.renderPage();
     }
-    
+
     // Initialize other features
     initSkipLink();
     initFileInput();
     initViewTransitions();
-    
+
     // Set up hash change listener
     window.addEventListener('hashchange', handleHashChange);
-    
+
     console.log('Application initialized successfully');
-    
+
   } catch (error) {
     console.error('Application initialization failed:', error);
   }
