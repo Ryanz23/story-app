@@ -214,21 +214,22 @@ export const STORY_NOTIFICATION_SCHEMA = {
  * @param {object} keys - { p256dh: string, auth: string }
  * @returns {Promise<object>}
  */
-export async function subscribeWebPush(endpoint, keys) {
+export async function subscribeWebPush({ endpoint, keys: { p256dh, auth } }) {
   const token = getToken();
   if (!token) throw new Error('Authentication required');
+
+  const subscription = JSON.stringify({
+    endpoint,
+    keys: { p256dh, auth }
+  })
+
   const response = await fetch(`${CONFIG.BASE_URL}/notifications/subscribe`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      endpoint,
-      keys,
-      p256dh: keys.p256dh,
-      auth: keys.auth,
-    }),
+    body: subscription
   });
   return await response.json();
 }

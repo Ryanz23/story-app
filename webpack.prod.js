@@ -29,11 +29,5 @@ module.exports = merge(common, {
   plugins: [
     new CleanWebpackPlugin(),
     new MiniCssExtractPlugin(),
-    new CopyWebpackPlugin({
-      patterns: [
-        { from: 'public', to: '.' },
-        { from: 'public/sw.js', to: 'sw.js' },
-      ],
-    }),
   ],
 });
