@@ -130,6 +130,16 @@ export default class AddPresenter {
           'success',
           'Cerita berhasil dikirim! <a href="#/">Kembali ke Beranda</a>'
         );
+
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          registration.showNotification('Story berhasil dibuat', {
+            body: `Anda telah membuat story baru dengan deskripsi: ${description}`,
+            icon: 'images/icon.png',
+            badge: 'images/icon.png',
+          });
+        }
+
         form.reset();
         this.view.resetFormUI();
         if (this._marker && this._map) this._map.removeLayer(this._marker);

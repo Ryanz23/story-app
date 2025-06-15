@@ -198,16 +198,6 @@ export async function getStoryDetail(id) {
 
 // --- Push Notification (Web Push) ---
 
-export const VAPID_PUBLIC_KEY =
-  'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk';
-
-export const STORY_NOTIFICATION_SCHEMA = {
-  title: 'Story berhasil dibuat',
-  options: {
-    body: 'Anda telah membuat story baru dengan deskripsi: <story description>',
-  },
-};
-
 /**
  * Subscribe to web push notifications
  * @param {string} endpoint
@@ -222,6 +212,7 @@ export async function subscribeWebPush({ endpoint, keys: { p256dh, auth } }) {
     endpoint,
     keys: { p256dh, auth }
   })
+  console.log('Web Push Subscription:', subscription);
 
   const response = await fetch(`${CONFIG.BASE_URL}/notifications/subscribe`, {
     method: 'POST',

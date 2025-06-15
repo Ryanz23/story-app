@@ -119,8 +119,8 @@ self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
   
   let notificationData = {
-    title: 'Story App',
-    body: 'You have a new notification!',
+    title: 'StoryApp',
+    body: 'Lihat cerita menarik untukmu!',
     icon: '/icon.png',
     badge: '/icon.png',
   };
